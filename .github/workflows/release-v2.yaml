@@ -1,0 +1,48 @@
+name: Create Release v3
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'version.txt'
+
+jobs:
+  release:
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Get release version from version.txt
+      id: version
+      run: echo ::set-output name=version::$(cat version.txt)
+
+    - name: Print release version.txt version
+      run: echo "Release Version is ${{ steps.version.outputs.version }}"
+
+    - name: Set docker image version
+      id: tag_name
+      run: echo ::set-output name=tag_name::${{ github.event.repository.name }}-${{ steps.version.outputs.version }}
+
+    - name: Output docker image version
+      run: echo "Docker imager tag = ${{ steps.tag_name.outputs.tag_name }}"
+
+    - name: Create release branch
+      run: |
+        git config --global user.email "ci@github.com"
+        git config --global user.name "Github CI"
+        git checkout -b release-${{ steps.version.outputs.version }}
+        git push origin release-${{ steps.version.outputs.version }}
+
+    - name: Build Code
+      run: echo "Build Code"
+
+    - name: Test Code
+      run: echo "Build Code"
+
+    - name: Build and Push Docker Image
+      run: echo "New docker image"
+
+    - name: Deploy to Stg
+      run: echo "Deploy to Stg"

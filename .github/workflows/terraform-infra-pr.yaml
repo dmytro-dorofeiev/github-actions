@@ -1,0 +1,196 @@
+name: PR validate
+
+concurrency:
+  group: ${{ github.head_ref }}-terraform-pr
+  cancel-in-progress: false
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - develop
+    paths:
+      - "infra/**"
+      - ".github/workflows/infra_pr.yaml"
+      - "tfvars/**"
+
+jobs:
+  validate_job:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - environment: eu-dev-1
+            aws_access_key_id: AWS_ACCESS_KEY_ID_DEV
+            aws_secret_access_key: AWS_SECRET_ACCESS_KEY_DEV
+          - environment: uk-stg-1
+            aws_access_key_id: AWS_ACCESS_KEY_ID_UK_STG
+            aws_secret_access_key: AWS_SECRET_ACCESS_KEY_UK_STG
+          - environment: uk-prod-1
+            aws_access_key_id: AWS_ACCESS_KEY_ID_UK_PROD
+            aws_secret_access_key: AWS_SECRET_ACCESS_KEY_UK_PROD
+
+    name: ${{ matrix.environment }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: "./infra"
+    env:
+      TF_DIR: ./infra
+      AWS_ACCESS_KEY_ID: ${{ secrets[matrix.aws_access_key_id] }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets[matrix.aws_secret_access_key] }}
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_wrapper: false
+          # terraform_version: 1.0.11
+
+      - name: Terraform fmt
+        id: fmt
+        run: |
+          terraform version
+          terraform fmt -check -diff
+        continue-on-error: true
+
+      - name: Terraform Init
+        id: init
+        run: |
+          terraform init -input=false \
+            -backend-config=../tfvars/${{ matrix.environment }}-backend.hcl \
+            -backend-config="access_key=${{ env.AWS_ACCESS_KEY_ID }}" \
+            -backend-config="secret_key=${{ env.AWS_SECRET_ACCESS_KEY }}"
+
+      - name: Terraform Validate
+        id: validate
+        run: |
+          terraform workspace new ${{ matrix.environment }} || true
+          terraform workspace select ${{ matrix.environment }}
+          terraform validate -no-color
+
+      - name: Terraform Plan
+        id: plan
+        run: |
+          ./terraform-plan-report.sh ${{ matrix.environment }}
+          TERRAFORM_PLAN=$(cat plan.log)
+          echo "TERRAFORM_PLAN<<EOF" >> $GITHUB_ENV
+          echo "$TERRAFORM_PLAN" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+        continue-on-error: true
+
+      - name: Print Plan
+        id: print-plan
+        run: |
+          echo "${{ env.TERRAFORM_PLAN }}"
+
+      - name: Update Pull Request
+        uses: actions/github-script@v3
+        if: github.event_name == 'pull_request'
+        env:
+          PLAN: "terraform\n${{ env.TERRAFORM_PLAN }}"
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const output = `### Validation result for \`${{ matrix.environment }}\`
+            #### Terraform Format and Style 🖌\`${{ steps.fmt.outcome }}\`
+            #### Terraform Initialization ⚙️\`${{ steps.init.outcome }}\`
+            #### Terraform Validation 🤖\`${{ steps.validate.outcome }}\`
+            #### Terraform Plan 📖\`${{ steps.plan.outcome }}\`
+
+            <details><summary>Show Plan</summary>
+
+            \`\`\`${process.env.PLAN}\`\`\`
+
+            </details>
+
+            *You can see the complete command output [here](https://github.com/${{github.repository}}/actions/runs/${{github.run_id}})*
+
+            *Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`, Workflow: \`${{ github.workflow }}\`*`;
+
+            github.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            })
+
+      - name: Terraform Plan Status
+        if: steps.plan.outcome == 'failure'
+        run: exit 1
+
+      - name: debug
+        uses: hmarr/debug-action@v2
+
+      # - name: Run infracost diff
+      #   uses: infracost/infracost-gh-action@master # Use a specific version instead of master if locking is preferred
+      #   env:
+      #     INFRACOST_API_KEY: ${{ secrets.INFRACOST_API_KEY }}
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Do not change
+      #   with:
+      #     path: $GITHUB_WORKSPACE/infra/plan.json
+
+      - name: Setup Infracost
+        uses: infracost/actions/setup@v1
+        with:
+          api-key: ${{ secrets.INFRACOST_API_KEY }}
+
+      - name: Rename plan
+        run: |
+          ls -l
+          mv $GITHUB_WORKSPACE/infra/plan $GITHUB_WORKSPACE/infra/${{ matrix.environment }}
+
+      - name: Run Infracost
+        run: |
+          infracost breakdown \
+            --path=$GITHUB_WORKSPACE/infra/${{ matrix.environment }} \
+            --format=json \
+            --out-file=/tmp/infracost_${{ matrix.environment }}.json
+
+      - name: Upload Infracost breakdown
+        uses: actions/upload-artifact@v2
+        with:
+          name: infracost_jsons
+          path: /tmp/infracost_${{ matrix.environment }}.json
+          retention-days: 1
+
+      - name: Upload Plan Errors
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ matrix.environment }}-error.log
+          path: $GITHUB_WORKSPACE/infra/error.log
+          retention-days: 1
+
+
+  multi_project_matrix_merge:
+    name: Multi-project matrix merge
+    runs-on: ubuntu-latest
+    needs: [validate_job]
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Download all Infracost breakdown files
+        uses: actions/download-artifact@v2
+        with:
+          path: /tmp
+
+      - name: Setup Infracost
+        uses: infracost/actions/setup@v1
+        with:
+          api-key: ${{ secrets.INFRACOST_API_KEY }}
+
+      - name: Combine the results
+        run: |
+          infracost output \
+            --path="/tmp/infracost_jsons/*.json" \
+            --format=json \
+            --out-file=/tmp/infracost_combined.json
+
+      - name: Post the comment
+        uses: infracost/actions/comment@v1
+        with:
+          path: /tmp/infracost_combined.json
+          behavior: update

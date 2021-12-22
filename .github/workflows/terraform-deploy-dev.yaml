@@ -1,0 +1,90 @@
+name: Deploy dev
+
+concurrency:
+  group: dev-terraform
+  cancel-in-progress: false
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Deploy environment"
+        required: true
+        default: "dev"
+  push:
+    branches:
+      - develop
+    paths:
+      - "infra/**"
+      - ".github/workflows/infra_pr.yaml"
+      - "tfvars/**"
+
+jobs:
+  init:
+    runs-on: ubuntu-latest
+    name: Init
+    steps:
+      - uses: actions/checkout@v2
+      - name: Get branch name
+        id: extract_branch
+        run: echo "##[set-output name=branch_name;]$(echo ${GITHUB_REF#refs/heads/})"
+    outputs:
+      branch_name: ${{ steps.extract_branch.outputs.branch_name }}
+
+  deploy:
+    needs: [init]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - environment: dev
+            aws_access_key_id: AWS_ACCESS_KEY_ID_DEV
+            aws_secret_access_key: AWS_SECRET_ACCESS_KEY_DEV
+    name: Deploy ${{github.event.inputs.environment }} branch ${{ needs.init.outputs.branch_name }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: "./infra"
+    env:
+      TF_DIR: ./infra
+      AWS_ACCESS_KEY_ID: ${{ secrets[matrix.aws_access_key_id] }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets[matrix.aws_secret_access_key] }}
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: hashicorp/setup-terraform@v1
+        # with:
+        #   terraform_version: 0.14.10
+      - uses: actions/setup-node@v2
+        with:
+          node-version: '14'
+      - name: Terraform Init
+        id: init
+        run: |
+          terraform init -input=false \
+            -backend-config=../tfvars/${{ matrix.environment }}-backend.hcl \
+            -backend-config="access_key=${{ env.AWS_ACCESS_KEY_ID }}" \
+            -backend-config="secret_key=${{ env.AWS_SECRET_ACCESS_KEY }}"
+
+      - name: Terraform Validate
+        id: validate
+        run: |
+          terraform workspace new ${{ matrix.environment }} || true
+          terraform workspace select ${{ matrix.environment }}
+          terraform validate -no-color
+
+      - name: Terraform Plan
+        id: plan
+        run: terraform plan -no-color -input=false -var-file=../tfvars/${{ matrix.environment }}.tfvars -out planfile
+
+      - name: Terraform Apply
+        id: apply
+        run: terraform apply -input=false -auto-approve planfile
+
+      # - name: Upload planfile artifact
+      #   uses: actions/upload-artifact@v2
+      #   with:
+      #     name: ${{github.event.inputs.environment }}-terraform-planfile
+      #     path: ${{ github.workspace }}/infra/planfile
+      #     retention-days: 1
