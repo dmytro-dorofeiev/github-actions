@@ -11,7 +11,7 @@ on:
       - develop
     paths:
       - "infra/**"
-      - ".github/workflows/infra_pr.yaml"
+      - ".github/workflows/terraform-infra-pr.yaml"
       - "tfvars/**"
 
 jobs:
@@ -20,13 +20,13 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - environment: eu-dev-1
+          - environment: dev
             aws_access_key_id: AWS_ACCESS_KEY_ID_DEV
             aws_secret_access_key: AWS_SECRET_ACCESS_KEY_DEV
-          - environment: uk-stg-1
+          - environment: stg
             aws_access_key_id: AWS_ACCESS_KEY_ID_UK_STG
             aws_secret_access_key: AWS_SECRET_ACCESS_KEY_UK_STG
-          - environment: uk-prod-1
+          - environment: prod
             aws_access_key_id: AWS_ACCESS_KEY_ID_UK_PROD
             aws_secret_access_key: AWS_SECRET_ACCESS_KEY_UK_PROD
 
