@@ -1,0 +1,28 @@
+name: 'Generate API docs'
+on:
+  workflow_dispatch:
+  # schedule:
+  #   - cron: '0 * * * *' # every hour
+
+jobs:
+  redoc-generate:
+    runs-on: ubuntu-latest
+    name: Generate redoc
+    steps:
+
+      # first checkout your code
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      # then use redoc-cli-github-action to generate your HTML bundle
+      - name: redoc-cli bundle eu-qa-1
+        uses: seeebiii/redoc-cli-github-action@v10
+        with:
+          args: 'bundle https://customer-ui.eu-qa-1.credis.tech/customer/api/swagger/v1/swagger.json -o index.html'
+      - name: Push to github
+        run: |
+          git config --global user.name "GitHub CI"
+          git config --global user.email "githubci@example.com"
+          git add .
+          git commit -m "Update docs"
+          git push
