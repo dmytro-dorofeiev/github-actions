@@ -12,8 +12,8 @@ jobs:
         id: json
         run: |
           pwd
-          ls -l
-          matrix=$(cat .github/workflows/json/matrix.json) >> $GITHUB_OUTPUT
+          ls -la
+          # matrix=$(cat .github/workflows/json/matrix.json) >> $GITHUB_OUTPUT
     outputs:
       matrix: ${{ steps.json.outputs.matrix }}
 
