@@ -1,0 +1,22 @@
+name: Test matrix shared pipeline
+
+on:
+  workflow_dispatch:
+
+jobs:
+  read:
+    name: Read JSON
+    runs-on: ubuntu-latest
+    steps:
+      - name: Read JSON file
+        id: json
+        run: matrix=$(cat ./json/matrix.json) >> $GITHUB_OUTPUT
+    outputs:
+      matrix: ${{ steps.json.outputs.matrix }}
+
+  run:
+    name: Test matrix job from JSON
+    needs: read
+    uses: dmytro-dorofeiev/shared-workflows/matrix.yaml@main
+    with:
+      matrix: ${{ fromJSON(needs.read.outputs.matrix) }}
