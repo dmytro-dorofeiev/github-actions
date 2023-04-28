@@ -17,6 +17,6 @@ jobs:
   run:
     name: Test matrix job from JSON
     needs: read
-    uses: dmytro-dorofeiev/shared-workflows/matrix.yaml@main
+    uses: dmytro-dorofeiev/shared-workflows/.github/workflows/matrix.yaml@main
     with:
       matrix: ${{ fromJSON(needs.read.outputs.matrix) }}
