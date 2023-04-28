@@ -10,7 +10,10 @@ jobs:
     steps:
       - name: Read JSON file
         id: json
-        run: matrix=$(cat ${{ env.GITHUB_WORKSPACE }}/.github/workflows/json/matrix.json) >> $GITHUB_OUTPUT
+        run: |
+          pwd
+          ls -l
+          matrix=$(cat .github/workflows/json/matrix.json) >> $GITHUB_OUTPUT
     outputs:
       matrix: ${{ steps.json.outputs.matrix }}
 
