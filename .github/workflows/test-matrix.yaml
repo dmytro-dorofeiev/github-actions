@@ -10,7 +10,7 @@ jobs:
     steps:
       - name: Read JSON file
         id: json
-        run: matrix=$(cat ./json/matrix.json) >> $GITHUB_OUTPUT
+        run: matrix=$(cat ./.github/workflows/json/matrix.json) >> $GITHUB_OUTPUT
     outputs:
       matrix: ${{ steps.json.outputs.matrix }}
 
