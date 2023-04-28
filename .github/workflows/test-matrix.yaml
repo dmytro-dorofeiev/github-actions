@@ -8,12 +8,13 @@ jobs:
     name: Read JSON
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v3
       - name: Read JSON file
         id: json
         run: |
           pwd
           ls -la
-          # matrix=$(cat .github/workflows/json/matrix.json) >> $GITHUB_OUTPUT
+          matrix=$(cat ./.github/workflows/json/matrix.json) >> $GITHUB_OUTPUT
     outputs:
       matrix: ${{ steps.json.outputs.matrix }}
 
