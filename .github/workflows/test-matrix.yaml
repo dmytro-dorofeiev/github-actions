@@ -23,7 +23,7 @@ jobs:
     needs: read
     runs-on: ubuntu-latest
     steps:
-      - run: echo  "variables = ${{ needs.read.outputs.variables }}"
+      - run: echo  "variables = ${{ needs.read.outputs.variables.include }}"
 
   run:
     name: Test matrix job from JSON
