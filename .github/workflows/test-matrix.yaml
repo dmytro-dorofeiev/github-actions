@@ -20,7 +20,7 @@ jobs:
           matrix="${JSON//$'\r'/'%0D'}"
           echo "variables=$matrix" >> $GITHUB_OUTPUT
     outputs:
-      matrix: ${{ steps.json.outputs.matrix }}
+      variables: ${{ steps.json.outputs.variables }}
 
   run:
     name: Test matrix job from JSON
