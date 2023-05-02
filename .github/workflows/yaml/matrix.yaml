@@ -1,0 +1,13 @@
+---
+- environment: eu-dev-1
+  AWS_OIDC_ROLE_NAME: "arn:aws:iam::785605009622:role/eu-dev-1-github-oidc-assume-role"
+  AWS_REGION: "eu-west-1"
+- environment: eu-qa-1
+  AWS_OIDC_ROLE_NAME: "arn:aws:iam::785605009622:role/eu-dev-1-github-oidc-assume-role"
+  AWS_REGION: "eu-west-1"
+- environment: uk-stg-1
+  AWS_OIDC_ROLE_NAME: "arn:aws:iam::837985852754:role/uk-stg-1-github-oidc-assume-role"
+  AWS_REGION: "eu-west-2"
+- environment: uk-sbx-1
+  AWS_OIDC_ROLE_NAME: "arn:aws:iam::837985852754:role/uk-stg-1-github-oidc-assume-role"
+  AWS_REGION: "eu-west-2"
