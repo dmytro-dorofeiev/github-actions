@@ -14,10 +14,11 @@ jobs:
         run: |
           pwd
           ls -la
-          matrix=$(cat ./.github/workflows/json/matrix.json | jq -c .)
-          echo "matrix<<EOF" >> $GITHUB_ENV
-          echo "$matrix" >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
+          matrix=$(cat ./.github/workflows/json/matrix.json)
+          matrix="${JSON//'%'/'%25'}"
+          matrix="${JSON//$'\n'/'%0A'}"
+          matrix="${JSON//$'\r'/'%0D'}"
+          echo "variables=$matrix" >> $GITHUB_OUTPUT
     outputs:
       matrix: ${{ steps.json.outputs.matrix }}
 
@@ -26,4 +27,4 @@ jobs:
     needs: read
     uses: dmytro-dorofeiev/shared-workflows/.github/workflows/matrix.yaml@main
     with:
-      matrix: ${{ env.matrix }}
+      matrix: ${{ fromJSON(needs.read.outputs.variables) }}
