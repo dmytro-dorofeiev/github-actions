@@ -13,7 +13,7 @@ jobs:
         id: json
         run: |
           echo 'variables<<EOF' >> $GITHUB_OUTPUT
-          cat ./.github/workflows/json/matrix2.json >> $GITHUB_OUTPUT
+          cat ./.github/workflows/json/matrix.json >> $GITHUB_OUTPUT
           echo 'EOF' >> $GITHUB_OUTPUT
     outputs:
       variables: ${{ steps.json.outputs.variables }}
