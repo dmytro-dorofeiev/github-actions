@@ -12,7 +12,7 @@ jobs:
       - name: Read JSON file
         id: json
         run: |
-          matrix=$(cat ./.github/workflows/json/matrix.json | jq -s -c .)
+          matrix=$(cat ./.github/workflows/json/matrix.json | sed ':a;N;$!ba;s/\n/%0A/g')
           echo "variables = $matrix"
           echo "variables=$matrix" >> $GITHUB_OUTPUT
     outputs:
