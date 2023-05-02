@@ -14,6 +14,7 @@ jobs:
         run: |
           pwd
           ls -la
+          cat ./.github/workflows/json/matrix.json
           matrix=$(cat ./.github/workflows/json/matrix.json)
           matrix="${JSON//'%'/'%25'}"
           matrix="${JSON//$'\n'/'%0A'}"
