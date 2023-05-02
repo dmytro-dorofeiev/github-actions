@@ -18,6 +18,7 @@ jobs:
           matrix="${JSON//'%'/'%25'}"
           matrix="${JSON//$'\n'/'%0A'}"
           matrix="${JSON//$'\r'/'%0D'}"
+          echo "variables = $matrix"
           echo "variables=$matrix" >> $GITHUB_OUTPUT
     outputs:
       variables: ${{ steps.json.outputs.variables }}
@@ -27,7 +28,7 @@ jobs:
     needs: read
     runs-on: ubuntu-latest
     steps:
-      - run: echo  ${{ needs.read.outputs.variables }}
+      - run: echo  "variables = ${{ needs.read.outputs.variables }}"
 
   run:
     name: Test matrix job from JSON
